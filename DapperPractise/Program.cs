@@ -12,13 +12,14 @@ void RunApp()
     string ans = null;
     do
     {
-        Console.WriteLine("Welcome to Dapper Test App \n Please select any Option to perform Dapper task");
+        Console.WriteLine("Welcome to Dapper Test App\nPlease select any Option to perform Dapper task");
         Console.WriteLine("1 to 'Get all the products'");
         Console.WriteLine("2 to 'Get product by Product Name'");
         Console.WriteLine("3 to 'Insert New Product'");
         Console.WriteLine("4 to 'Update an existing Product'");
-        Console.WriteLine("5 to 'Delete a product'");
+        Console.WriteLine("5 to 'Delete a product'\n");
 
+        Console.WriteLine("Enter your option");
         int option = Convert.ToInt32(Console.ReadLine());
 
         switch (option)
@@ -28,7 +29,7 @@ void RunApp()
 
                 foreach (var item in productList)
                 {
-                    Console.WriteLine($"{item.ProductID} {item.ProductName} {item.Price}");
+                    Console.WriteLine($"ID: {item.ProductID} , Name: {item.ProductName}, Price:{item.Price}, Category:{item.Category.CategoryName}");
                 }
                 break;
 
@@ -37,7 +38,7 @@ void RunApp()
                 string name = Console.ReadLine();
 
                 var prod = GetProductByName(name);
-                Console.WriteLine($"{prod.ProductID} {prod.ProductName} {prod.Price}");
+                Console.WriteLine($"ID: {prod.ProductID} , Name: {prod.ProductName}, Price:{prod.Price}, Category:{prod.Category.CategoryName}");
                 break;
 
             case 3:
@@ -75,10 +76,13 @@ List<Product>GetAllProducts()
 
     using (IDbConnection conn = new SqlConnection(connectionString))
     {
-        var sql = "select * from products";
+        var sql = "select * from products p join categories c on p.catID = c.categoryID";
 
-        products = conn.Query<Product>(sql).ToList();
-       
+        products = conn.Query<Product, Category, Product>(sql, (product, category) =>
+        {
+            product.Category = category;
+            return product;
+        }, splitOn: "CategoryID").ToList();
     }
     return products;
 }
@@ -88,11 +92,13 @@ Product GetProductByName(string pdName)
     Product product = null;
     using (IDbConnection conn = new SqlConnection(connectionString))
     {
-        var sql = "select * from products where productname = @productName";
-        DynamicParameters parameters = new DynamicParameters();
-        parameters.Add("@productName", pdName);
-        product = conn.QueryFirstOrDefault<Product>(sql, parameters);
-
+        var sql = "select * from products p join categories c on p.catID = c.categoryID where productname = '" + pdName + "'";
+        var products = conn.Query<Product, Category, Product>(sql,(product, category) =>
+        {
+            product.Category = category;
+            return product;
+        }, splitOn: "CategoryID").ToList();
+        products.ForEach(p => product = p);
     }
     return product;
 }
@@ -107,12 +113,16 @@ void InsertProduct()
         Console.WriteLine("Enter the price of product");
         int price = Convert.ToInt32(Console.ReadLine());
 
+        Console.WriteLine("Enter the ID of Category");
+        int cat = Convert.ToInt32(Console.ReadLine());
+
         using (IDbConnection conn = new SqlConnection(connectionString))
         {
-            var sql = "insert into products values (@productName, @price)";
+            var sql = "insert into products values (@productName, @price, @categoryID)";
             DynamicParameters parameters = new DynamicParameters();
             parameters.Add("@productName", productName);
             parameters.Add("@price", price);
+            parameters.Add("@categoryID", cat);
 
             conn.Execute(sql, parameters);
 
@@ -135,13 +145,18 @@ void UpdateProduct(int prodID)
         Console.WriteLine("Enter Updated price of the product");
         int price = Convert.ToInt32(Console.ReadLine());
 
+        Console.WriteLine("Enter ID of Updtated Category");
+        int catID = Convert.ToInt32(Console.ReadLine());
+
         using (IDbConnection conn = new SqlConnection(connectionString))
         {
-            var sql = "update products set ProductName = @updatedProductName, Price = @UpdatedPrice where ProductID = @id";
+            var sql = "update products set ProductName = @updatedProductName, Price = @UpdatedPrice, CatID =@UpdatedCatID where ProductID = @id";
             DynamicParameters parameters = new DynamicParameters();
             parameters.Add("@updatedProductName", productName);
             parameters.Add("@updatedPrice", price);
             parameters.Add("@id", prodID);
+            parameters.Add("@UpdatedCatID", catID);
+
             conn.Execute(sql, parameters);
 
         }
