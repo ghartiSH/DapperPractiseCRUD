@@ -17,7 +17,8 @@ void RunApp()
         Console.WriteLine("2 to 'Get product by Product Name'");
         Console.WriteLine("3 to 'Insert New Product'");
         Console.WriteLine("4 to 'Update an existing Product'");
-        Console.WriteLine("5 to 'Delete a product'\n");
+        Console.WriteLine("5 to 'Delete a product'");
+        Console.WriteLine("6 to 'Get product by Product Id'\n");
 
         Console.WriteLine("Enter your option");
         int option = Convert.ToInt32(Console.ReadLine());
@@ -56,6 +57,11 @@ void RunApp()
                 int pid = Convert.ToInt32(Console.ReadLine());
                 DeleteProduct(pid);
                 break;
+            case 6:
+                Console.WriteLine("Enter the ID of the product to Get");
+                int spid = Convert.ToInt32(Console.ReadLine());
+                GetProductByID(spid);
+                break;
 
             default:
                 Console.WriteLine("Enter the valid Option");
@@ -85,6 +91,27 @@ List<Product>GetAllProducts()
         }, splitOn: "CategoryID").ToList();
     }
     return products;
+}
+
+void GetProductByID(int id)
+{
+    using (IDbConnection conn = new SqlConnection(connectionString))
+    {
+        var sql = "exec [ProductDetailsByID] @pid";
+        var values = new { pid = id };
+        var results =conn.Query(sql, values).ToList();
+
+        if (results.Count < 1)
+        {
+            Console.WriteLine("Sorry! No records found");
+        }
+        else
+        {
+            results.ForEach(x => Console.WriteLine($"ID:{x.ProductName}, Name:{x.ProductName}, Price:{x.Price}, Category:{x.CategoryName}"));
+        }
+
+        
+    }
 }
 
 Product GetProductByName(string pdName)
